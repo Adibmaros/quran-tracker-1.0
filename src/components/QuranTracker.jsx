@@ -1,4 +1,6 @@
 // components/QuranTracker.jsx
+"use client"
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PrismaClient } from '@prisma/client';
@@ -157,6 +159,11 @@ export default function QuranTracker() {
     }
   };
 
+  // Fungsi handler terpisah untuk card
+  const handleCardClick = (juzNumber) => {
+    toggleJuzCompletion(juzNumber);
+  };
+
   if (loading) {
     return <div className="flex justify-center p-8">Loading...</div>;
   }
@@ -175,25 +182,29 @@ export default function QuranTracker() {
         {juzData.map((juz) => (
           <div 
             key={juz.juzNumber}
-            className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+            className={`border rounded-lg p-4 transition-colors ${
               juz.isCompleted ? 'bg-green-100 border-green-500' : 'bg-white'
             }`}
-            onClick={() => toggleJuzCompletion(juz.juzNumber)}
           >
-            <h3 className="font-bold text-lg">Juz {juz.juzNumber}</h3>
-            <p className="text-sm">{juz.isCompleted ? 'Sudah dibaca' : 'Belum dibaca'}</p>
-            {juz.lastReadDate && (
-              <p className="text-xs text-gray-600 mt-1">
-                Terakhir dibaca: {new Date(juz.lastReadDate).toLocaleDateString()}
-              </p>
-            )}
+            <div 
+              className="cursor-pointer"
+              onClick={() => handleCardClick(juz.juzNumber)}
+            >
+              <h3 className="font-bold text-lg">Juz {juz.juzNumber}</h3>
+              <p className="text-sm">{juz.isCompleted ? 'Sudah dibaca' : 'Belum dibaca'}</p>
+              {juz.lastReadDate && (
+                <p className="text-xs text-gray-600 mt-1">
+                  Terakhir dibaca: {new Date(juz.lastReadDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+            
             {user && (
-              <div className="mt-2">
+              <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                 <textarea
                   placeholder="Catatan..."
                   className="w-full text-sm p-1 border rounded"
                   value={juz.notes || ''}
-                  onClick={(e) => e.stopPropagation()}
                   onChange={(e) => addNote(juz.juzNumber, e.target.value)}
                 />
               </div>
