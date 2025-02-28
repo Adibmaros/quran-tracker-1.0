@@ -7,7 +7,7 @@ import { updateJuzStatus } from "../lib/firebaseFunctions";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Moon, BookOpen, PieChart, List, CheckCircle2, Circle, Bell, UserCircle } from "lucide-react";
+import { Moon, BookOpen, PieChart, CheckCircle2, Circle, Bell, UserCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 export default function Home() {
