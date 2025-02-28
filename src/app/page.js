@@ -52,7 +52,7 @@ export default function Home() {
             <Moon className="text-emerald-600 dark:text-emerald-400 h-8 w-8" />
             <h1 className="text-4xl font-arabic font-bold text-emerald-800 dark:text-emerald-200">Tracker Bacaan Al-Qur'an</h1>
           </div>
-          <p className="text-emerald-600 dark:text-emerald-400">Ramadhan Kareem 1445H</p>
+          <p className="text-emerald-600 dark:text-emerald-400">Ramadhan Kareem 1446H</p>
         </div>
 
         <Card className="mb-8 bg-white/50 backdrop-blur-sm border-emerald-200 dark:bg-emerald-900/50 dark:border-emerald-800">
