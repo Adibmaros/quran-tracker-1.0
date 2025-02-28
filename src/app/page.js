@@ -15,18 +15,25 @@ export default function Home() {
   const [userName, setUserName] = useState("");
   const [recentActivity, setRecentActivity] = useState([]);
 
-  const startJuz = 1;
-  const juzPerDay = 10;
-  const currentJuzRange = Array.from({ length: juzPerDay }, (_, i) => startJuz + i);
+  const totalJuzCount = 30;
+  const allJuzRange = Array.from({ length: totalJuzCount }, (_, i) => i + 1);
 
   useEffect(() => {
     const juzRef = ref(db, "juz_tracking");
     onValue(juzRef, (snapshot) => {
       const allJuz = snapshot.val() || {};
-      const todayJuz = Object.fromEntries(Object.entries(allJuz).filter(([juz]) => currentJuzRange.includes(Number(juz))));
-      setJuzList(todayJuz);
 
-      // Process recent activities
+      const completeJuzList = {};
+      allJuzRange.forEach((juz) => {
+        completeJuzList[juz] = allJuz[juz] || {
+          status: "Belum Dibaca",
+          dibaca_oleh: "",
+          waktu_selesai: null,
+        };
+      });
+
+      setJuzList(completeJuzList);
+
       const activities = Object.entries(allJuz)
         .filter(([_, juzData]) => juzData.waktu_selesai)
         .map(([juz, juzData]) => ({
@@ -75,11 +82,9 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200">Progress Hari Ini</h2>
+                <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200">Progress Keseluruhan</h2>
               </div>
-              <span className="text-emerald-600 dark:text-emerald-400">
-                Juz {startJuz} - {startJuz + juzPerDay - 1}
-              </span>
+              <span className="text-emerald-600 dark:text-emerald-400">30 Juz Al-Qur'an</span>
             </div>
           </CardHeader>
           <CardContent>
