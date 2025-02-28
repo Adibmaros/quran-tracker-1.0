@@ -2,13 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, update, get } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA8FPaWo93IEraOFBru0RBVd_xVGpct1bE",
-  authDomain: "exo-mengaji.firebaseapp.com",
-  projectId: "exo-mengaji",
-  databaseURL: "https://exo-mengaji-default-rtdb.asia-southeast1.firebasedatabase.app",
-  storageBucket: "exo-mengaji.firebasestorage.app",
-  messagingSenderId: "908291872962",
-  appId: "1:908291872962:web:5dde088672c2f26bb2835b",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
