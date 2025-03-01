@@ -1,53 +1,23 @@
+// lib/firebaseFunctions.js
 import { db, ref, set, update, get } from "../lib/firebaseConfig";
 
+/**
+ * Adds initial data for all 30 juz to the database
+ */
 export const tambahDataAwal = () => {
   const currentTime = new Date().toLocaleString("id-ID", {
     dateStyle: "full",
     timeStyle: "medium",
   });
-
-  //   const data = {
-  //     1: { nama: "Juz 1", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     2: { nama: "Juz 2", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     3: { nama: "Juz 3", status: "sudah dibaca", dibaca_oleh: "Ahmad", waktu_selesai: currentTime },
-  //     4: { nama: "Juz 4", status: "sudah dibaca", dibaca_oleh: "Fatimah", waktu_selesai: currentTime },
-  //     5: { nama: "Juz 5", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     6: { nama: "Juz 6", status: "sudah dibaca", dibaca_oleh: "Ali", waktu_selesai: currentTime },
-  //     7: { nama: "Juz 7", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     8: { nama: "Juz 8", status: "sudah dibaca", dibaca_oleh: "Zainab", waktu_selesai: currentTime },
-  //     9: { nama: "Juz 9", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     10: { nama: "Juz 10", status: "sudah dibaca", dibaca_oleh: "Umar", waktu_selesai: currentTime },
-  //     11: { nama: "Juz 11", status: "sudah dibaca", dibaca_oleh: "Aisyah", waktu_selesai: currentTime },
-  //     12: { nama: "Juz 12", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     13: { nama: "Juz 13", status: "sudah dibaca", dibaca_oleh: "Bilal", waktu_selesai: currentTime },
-  //     14: { nama: "Juz 14", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     15: { nama: "Juz 15", status: "sudah dibaca", dibaca_oleh: "Hasan", waktu_selesai: currentTime },
-  //     16: { nama: "Juz 16", status: "sudah dibaca", dibaca_oleh: "Husain", waktu_selesai: currentTime },
-  //     17: { nama: "Juz 17", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     18: { nama: "Juz 18", status: "sudah dibaca", dibaca_oleh: "Khalid", waktu_selesai: currentTime },
-  //     19: { nama: "Juz 19", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     20: { nama: "Juz 20", status: "sudah dibaca", dibaca_oleh: "Utsman", waktu_selesai: currentTime },
-  //     21: { nama: "Juz 21", status: "sudah dibaca", dibaca_oleh: "Siti", waktu_selesai: currentTime },
-  //     22: { nama: "Juz 22", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     23: { nama: "Juz 23", status: "sudah dibaca", dibaca_oleh: "Abu Bakar", waktu_selesai: currentTime },
-  //     24: { nama: "Juz 24", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     25: { nama: "Juz 25", status: "sudah dibaca", dibaca_oleh: "Salman", waktu_selesai: currentTime },
-  //     26: { nama: "Juz 26", status: "sudah dibaca", dibaca_oleh: "Yusuf", waktu_selesai: currentTime },
-  //     27: { nama: "Juz 27", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     28: { nama: "Juz 28", status: "sudah dibaca", dibaca_oleh: "Maryam", waktu_selesai: currentTime },
-  //     29: { nama: "Juz 29", status: "belum dibaca", dibaca_oleh: null, waktu_selesai: null },
-  //     30: { nama: "Juz 30", status: "sudah dibaca", dibaca_oleh: "Muhammad", waktu_selesai: currentTime },
-  //   };
-
   const data = {};
-
   // Generate complete data for all 30 juz
   for (let i = 1; i <= 30; i++) {
     data[i] = {
       nama: `Juz ${i}`,
-      status: "belum dibaca",
-      dibaca_oleh: null,
+      status: "Belum Dibaca",
+      dibaca_oleh: "",
       waktu_selesai: null,
+      penugasan: "", // Field baru untuk menyimpan nama orang yang ditugaskan
     };
   }
   set(ref(db, "juz_tracking"), data)
@@ -59,8 +29,14 @@ export const tambahDataAwal = () => {
  * Memperbarui status juz yang telah dibaca
  * @param {number} juz - Nomor juz yang diperbarui
  * @param {string} nama - Nama pembaca yang bertanggung jawab
+ * @returns {Promise<boolean>} - Status keberhasilan operasi
  */
 export async function updateJuzStatus(juz, nama) {
+  if (!nama || nama.trim() === "") {
+    console.error("Nama pembaca tidak boleh kosong");
+    return false;
+  }
+
   const juzRef = ref(db, `juz_tracking/${juz}`);
   const timestamp = new Date().toLocaleString("id-ID", {
     dateStyle: "full",
@@ -70,7 +46,6 @@ export async function updateJuzStatus(juz, nama) {
   try {
     const snapshot = await get(juzRef);
     const juzData = snapshot.val();
-
     if (juzData?.status === "Sudah Dibaca") {
       // Jika sudah dibaca, ubah ke belum dibaca
       await update(juzRef, {
@@ -86,7 +61,162 @@ export async function updateJuzStatus(juz, nama) {
         waktu_selesai: timestamp,
       });
     }
+    return true;
   } catch (error) {
     console.error("Error updating juz:", error);
+    return false;
+  }
+}
+
+/**
+ * Menetapkan pembaca untuk juz tertentu
+ * @param {number|string} juz - Nomor juz yang akan ditetapkan pembacanya
+ * @param {string} nama - Nama pembaca yang ditugaskan
+ * @returns {Promise<boolean>} - Status keberhasilan operasi
+ */
+export async function tetapkanPembaca(juz, nama) {
+  if (!nama || nama.trim() === "") {
+    console.error("Nama pembaca tidak boleh kosong");
+    return false;
+  }
+
+  const juzRef = ref(db, `juz_tracking/${juz}`);
+
+  try {
+    await update(juzRef, {
+      penugasan: nama,
+    });
+    console.log(`Juz ${juz} berhasil ditugaskan kepada ${nama}`);
+    return true;
+  } catch (error) {
+    console.error(`Error menetapkan pembaca untuk juz ${juz}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Menetapkan beberapa juz sekaligus untuk seorang pembaca
+ * @param {Array<number|string>} juzList - Array nomor juz yang akan ditetapkan
+ * @param {string} nama - Nama pembaca yang ditugaskan
+ * @returns {Promise<boolean>} - Status keberhasilan operasi
+ */
+export async function tetapkanBeberapaJuz(juzList, nama) {
+  if (!nama || nama.trim() === "") {
+    console.error("Nama pembaca tidak boleh kosong");
+    return false;
+  }
+
+  if (!juzList || !Array.isArray(juzList) || juzList.length === 0) {
+    console.error("Daftar juz tidak valid");
+    return false;
+  }
+
+  const updates = {};
+
+  juzList.forEach((juz) => {
+    updates[`juz_tracking/${juz}/penugasan`] = nama;
+  });
+
+  try {
+    await update(ref(db), updates);
+    console.log(`${juzList.length} juz berhasil ditugaskan kepada ${nama}`);
+    return true;
+  } catch (error) {
+    console.error("Error menetapkan beberapa juz:", error);
+    return false;
+  }
+}
+
+/**
+ * Mendapatkan data semua juz
+ * @returns {Promise<Object>} - Data semua juz
+ */
+export async function getAllJuzData() {
+  try {
+    const snapshot = await get(ref(db, "juz_tracking"));
+    return snapshot.val() || {};
+  } catch (error) {
+    console.error("Error getting juz data:", error);
+    return {};
+  }
+}
+
+/**
+ * Mendapatkan statistik bacaan semua juz
+ * @returns {Promise<Object>} - Statistik bacaan
+ */
+export async function getReadingStats() {
+  try {
+    const allJuzData = await getAllJuzData();
+
+    const stats = {
+      totalJuz: 30,
+      completedJuz: 0,
+      assignedJuz: 0,
+      readers: new Set(),
+      juzPerReader: {},
+    };
+
+    Object.entries(allJuzData).forEach(([juz, data]) => {
+      // Count completed juz
+      if (data.status === "Sudah Dibaca") {
+        stats.completedJuz++;
+
+        // Add to readers set
+        if (data.dibaca_oleh) {
+          stats.readers.add(data.dibaca_oleh);
+
+          // Track juz per reader
+          if (!stats.juzPerReader[data.dibaca_oleh]) {
+            stats.juzPerReader[data.dibaca_oleh] = 1;
+          } else {
+            stats.juzPerReader[data.dibaca_oleh]++;
+          }
+        }
+      }
+
+      // Count assigned juz
+      if (data.penugasan) {
+        stats.assignedJuz++;
+      }
+    });
+
+    // Convert readers set to array size
+    stats.uniqueReaders = Array.from(stats.readers).length;
+
+    return stats;
+  } catch (error) {
+    console.error("Error getting reading stats:", error);
+    return {
+      totalJuz: 30,
+      completedJuz: 0,
+      assignedJuz: 0,
+      uniqueReaders: 0,
+      juzPerReader: {},
+    };
+  }
+}
+
+/**
+ * Reset semua status juz ke "Belum Dibaca"
+ * @returns {Promise<boolean>} - Status keberhasilan operasi
+ */
+export async function resetAllJuzStatus() {
+  try {
+    const allJuzData = await getAllJuzData();
+    const updates = {};
+
+    Object.keys(allJuzData).forEach((juz) => {
+      updates[`juz_tracking/${juz}/status`] = "Belum Dibaca";
+      updates[`juz_tracking/${juz}/dibaca_oleh`] = "";
+      updates[`juz_tracking/${juz}/waktu_selesai`] = null;
+    });
+
+    await update(ref(db), updates);
+    console.log("Semua status juz berhasil direset");
+    return true;
+  } catch (error) {
+    console.error("Error resetting juz status:", error);
+    return false;
   }
 }
