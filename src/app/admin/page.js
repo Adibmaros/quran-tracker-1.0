@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCog, Save, Users, BookOpen, AlertCircle } from "lucide-react";
+import { UserCog, Save, Users, BookOpen, AlertCircle, Edit, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminPage() {
   const [juzData, setJuzData] = useState({});
@@ -23,10 +24,12 @@ export default function AdminPage() {
   const [bulkAssignPembaca, setBulkAssignPembaca] = useState("");
   const [selectedJuzList, setSelectedJuzList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  // Get toast function from the hook
+  // State for filtering
+  const [filterPembaca, setFilterPembaca] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const { toast } = useToast();
 
-  // Daftar pembaca (seharusnya dari database, namun ini contoh saja)
+  // Add a new pembaca
   const addPembaca = () => {
     if (newPembacaNama.trim() !== "" && !pembacaList.includes(newPembacaNama.trim())) {
       setPembacaList([...pembacaList, newPembacaNama.trim()]);
@@ -36,13 +39,13 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    // Load daftar pembaca dari localStorage
+    // Load pembaca list from localStorage
     const savedPembacaList = localStorage.getItem("pembacaList");
     if (savedPembacaList) {
       setPembacaList(JSON.parse(savedPembacaList));
     }
 
-    // Load data juz
+    // Load juz data
     const juzRef = ref(db, "juz_tracking");
     onValue(juzRef, (snapshot) => {
       const data = snapshot.val() || {};
@@ -94,10 +97,10 @@ export default function AdminPage() {
   };
 
   const toggleJuzSelection = (juz) => {
-    if (selectedJuzList.includes(juz)) {
-      setSelectedJuzList(selectedJuzList.filter((j) => j !== juz));
+    if (selectedJuzList.includes(juz.toString())) {
+      setSelectedJuzList(selectedJuzList.filter((j) => j !== juz.toString()));
     } else {
-      setSelectedJuzList([...selectedJuzList, juz]);
+      setSelectedJuzList([...selectedJuzList, juz.toString()]);
     }
   };
 
@@ -109,9 +112,91 @@ export default function AdminPage() {
     }
   };
 
+  // Reassign a juz to different pembaca directly from table
+  const handleReassignJuz = async (juz, newPembaca) => {
+    setIsLoading(true);
+    const success = await tetapkanPembaca(juz, newPembaca);
+    setIsLoading(false);
+
+    if (success) {
+      toast({
+        title: "Berhasil",
+        description: `Juz ${juz} berhasil direassign kepada ${newPembaca}`,
+      });
+    } else {
+      toast({
+        title: "Gagal",
+        description: "Terjadi kesalahan saat mereassign pembaca",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Quick reassign action for each row
+  const QuickReassign = ({ juz, currentPembaca }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [newPembaca, setNewPembaca] = useState(currentPembaca || "");
+
+    const handleSave = async () => {
+      if (newPembaca !== currentPembaca) {
+        await handleReassignJuz(juz, newPembaca);
+      }
+      setIsEditing(false);
+    };
+
+    return isEditing ? (
+      <div className="flex items-center gap-2">
+        <Select value={newPembaca} onValueChange={setNewPembaca}>
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="Pembaca" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">-</SelectItem>
+            {pembacaList.map((pembaca) => (
+              <SelectItem key={pembaca} value={pembaca}>
+                {pembaca}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button size="sm" variant="outline" onClick={handleSave}>
+          <Save className="h-4 w-4" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    ) : (
+      <div className="flex items-center gap-2">
+        <span>{currentPembaca || "-"}</span>
+        <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)}>
+          <Edit className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
+
+  // Filter juz data based on selected filters
+  const filteredJuzData = Object.entries(juzData).filter(([juz, data]) => {
+    // Filter by pembaca
+    if (filterPembaca && data.penugasan !== filterPembaca) {
+      return false;
+    }
+
+    // Filter by status
+    if (filterStatus && data.status !== filterStatus) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Get unique status values
+  const statusOptions = ["Belum Dibaca", "Sudah Dibaca"];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-teal-100 dark:from-emerald-900 dark:to-teal-950">
-      <div className="container mx-auto p-6">
+      <div className=" mx-auto p-6">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
             <UserCog className="text-emerald-600 dark:text-emerald-400 h-8 w-8" />
@@ -143,13 +228,17 @@ export default function AdminPage() {
                         <SelectValue placeholder="Pilih Juz" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Array.from({ length: 30 }, (_, i) => i + 1).map((juz) => (
-                          <SelectItem key={juz} value={juz.toString()}>
-                            Juz {juz}
-                          </SelectItem>
-                        ))}
+                        {Array.from({ length: 30 }, (_, i) => i + 1).map((juz) => {
+                          const juzInfo = juzData[juz.toString()];
+                          return (
+                            <SelectItem key={juz} value={juz.toString()}>
+                              Juz {juz} {juzInfo?.penugasan ? `(${juzInfo.penugasan})` : ""}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
+                    {selectedJuz && juzData[selectedJuz]?.penugasan && <p className="text-amber-600 text-sm mt-1">Juz ini sudah ditugaskan kepada: {juzData[selectedJuz]?.penugasan}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -159,6 +248,7 @@ export default function AdminPage() {
                         <SelectValue placeholder="Pilih Pembaca" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">-</SelectItem>
                         {pembacaList.map((pembaca) => (
                           <SelectItem key={pembaca} value={pembaca}>
                             {pembaca}
@@ -168,8 +258,8 @@ export default function AdminPage() {
                     </Select>
                   </div>
 
-                  <Button className="w-full" onClick={handleAssignPembaca} disabled={!selectedJuz || !selectedPembaca || isLoading}>
-                    {isLoading ? "Menyimpan..." : "Tetapkan Pembaca"}
+                  <Button className="w-full" onClick={handleAssignPembaca} disabled={!selectedJuz || isLoading}>
+                    {isLoading ? "Menyimpan..." : juzData[selectedJuz]?.penugasan ? "Perbarui Penugasan" : "Tetapkan Pembaca"}
                   </Button>
                 </CardContent>
               </Card>
@@ -189,6 +279,7 @@ export default function AdminPage() {
                         <SelectValue placeholder="Pilih Pembaca" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">-</SelectItem>
                         {pembacaList.map((pembaca) => (
                           <SelectItem key={pembaca} value={pembaca}>
                             {pembaca}
@@ -206,21 +297,25 @@ export default function AdminPage() {
                       </Button>
                     </div>
                     <div className="grid grid-cols-5 gap-2 mt-2">
-                      {Array.from({ length: 30 }, (_, i) => i + 1).map((juz) => (
-                        <Button
-                          key={juz}
-                          variant={selectedJuzList.includes(juz.toString()) ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => toggleJuzSelection(juz.toString())}
-                          className={selectedJuzList.includes(juz.toString()) ? "bg-emerald-600" : ""}
-                        >
-                          {juz}
-                        </Button>
-                      ))}
+                      {Array.from({ length: 30 }, (_, i) => i + 1).map((juz) => {
+                        const juzStr = juz.toString();
+                        const hasAssignment = juzData[juzStr]?.penugasan;
+                        return (
+                          <Button
+                            key={juz}
+                            variant={selectedJuzList.includes(juzStr) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => toggleJuzSelection(juzStr)}
+                            className={`${selectedJuzList.includes(juzStr) ? "bg-emerald-600" : ""} ${hasAssignment ? "border-amber-400" : ""}`}
+                          >
+                            {juz}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  <Button className="w-full" onClick={handleBulkAssign} disabled={selectedJuzList.length === 0 || !bulkAssignPembaca || isLoading}>
+                  <Button className="w-full" onClick={handleBulkAssign} disabled={selectedJuzList.length === 0 || isLoading}>
                     {isLoading ? "Menyimpan..." : `Tetapkan ${selectedJuzList.length} Juz`}
                   </Button>
                 </CardContent>
@@ -229,9 +324,51 @@ export default function AdminPage() {
 
             <Card className="mt-6 bg-white/50 backdrop-blur-sm border-emerald-200 dark:bg-emerald-900/50 dark:border-emerald-800">
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200">Status Penugasan Juz</h2>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200">Status Penugasan Juz</h2>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <Select value={filterPembaca} onValueChange={setFilterPembaca}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="Filter Pembaca" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Pembaca</SelectItem>
+                        {pembacaList.map((pembaca) => (
+                          <SelectItem key={pembaca} value={pembaca}>
+                            {pembaca}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="Filter Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Status</SelectItem>
+                        {statusOptions.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(filterPembaca || filterStatus) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setFilterPembaca("");
+                          setFilterStatus("");
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -247,11 +384,17 @@ export default function AdminPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Object.entries(juzData).map(([juz, data]) => (
-                        <TableRow key={juz}>
+                      {filteredJuzData.map(([juz, data]) => (
+                        <TableRow key={juz} className={data.status === "Sudah Dibaca" ? "bg-emerald-100/50 dark:bg-emerald-800/30" : ""}>
                           <TableCell>Juz {juz}</TableCell>
-                          <TableCell>{data.penugasan || "-"}</TableCell>
-                          <TableCell>{data.status}</TableCell>
+                          <TableCell>
+                            <QuickReassign juz={juz} currentPembaca={data.penugasan} />
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={data.status === "Sudah Dibaca" ? "default" : "outline"} className={data.status === "Sudah Dibaca" ? "bg-emerald-500" : ""}>
+                              {data.status}
+                            </Badge>
+                          </TableCell>
                           <TableCell>{data.dibaca_oleh || "-"}</TableCell>
                           <TableCell>{data.waktu_selesai || "-"}</TableCell>
                         </TableRow>
@@ -286,22 +429,40 @@ export default function AdminPage() {
                   <h3 className="font-medium text-emerald-800 dark:text-emerald-200">Daftar Pembaca</h3>
                   {pembacaList.length > 0 ? (
                     <div className="space-y-2">
-                      {pembacaList.map((pembaca, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-white/30 dark:bg-emerald-800/30 rounded-md">
-                          <span>{pembaca}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const newList = pembacaList.filter((_, i) => i !== index);
-                              setPembacaList(newList);
-                              localStorage.setItem("pembacaList", JSON.stringify(newList));
-                            }}
-                          >
-                            Hapus
-                          </Button>
-                        </div>
-                      ))}
+                      {pembacaList.map((pembaca, index) => {
+                        // Count assigned juz for this pembaca
+                        const assignedCount = Object.values(juzData).filter((data) => data.penugasan === pembaca).length;
+
+                        // Count completed juz for this pembaca
+                        const completedCount = Object.values(juzData).filter((data) => data.penugasan === pembaca && data.status === "Sudah Dibaca").length;
+
+                        return (
+                          <div key={index} className="flex items-center justify-between p-3 bg-white/30 dark:bg-emerald-800/30 rounded-md">
+                            <div>
+                              <span className="font-medium">{pembaca}</span>
+                              <div className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
+                                Ditugaskan: {assignedCount} juz | Selesai: {completedCount} juz
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="bg-white/50 dark:bg-emerald-800/50">
+                                {((completedCount / assignedCount) * 100 || 0).toFixed(0)}% selesai
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newList = pembacaList.filter((_, i) => i !== index);
+                                  setPembacaList(newList);
+                                  localStorage.setItem("pembacaList", JSON.stringify(newList));
+                                }}
+                              >
+                                Hapus
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 p-4 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 rounded-md">

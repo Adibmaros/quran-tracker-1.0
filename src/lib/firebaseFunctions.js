@@ -1,5 +1,5 @@
 // lib/firebaseFunctions.js
-import { db, ref, set, update, get } from "../lib/firebaseConfig";
+import { db, ref, set, update, get, query, orderByChild } from "../lib/firebaseConfig";
 
 /**
  * Adds initial data for all 30 juz to the database
@@ -43,9 +43,25 @@ export async function updateJuzStatus(juz, nama) {
     timeStyle: "medium",
   });
 
+  const isoTimestamp = new Date().toISOString();
+  const dateOnly = isoTimestamp.split("T")[0]; // YYYY-MM-DD format
+
   try {
     const snapshot = await get(juzRef);
     const juzData = snapshot.val();
+
+    // Add to history when marked as read
+    if (juzData?.status !== "Sudah Dibaca") {
+      // Add to reader history
+      const historyRef = ref(db, `reader_history/${Date.now()}`);
+      await set(historyRef, {
+        name: nama,
+        juz: juz,
+        timestamp: isoTimestamp,
+        date: dateOnly,
+      });
+    }
+
     if (juzData?.status === "Sudah Dibaca") {
       // Jika sudah dibaca, ubah ke belum dibaca
       await update(juzRef, {
@@ -194,6 +210,30 @@ export async function getReadingStats() {
       uniqueReaders: 0,
       juzPerReader: {},
     };
+  }
+}
+
+/**
+ * Mendapatkan riwayat pembaca
+ * @returns {Promise<Array>} - Array riwayat pembaca
+ */
+export async function getReaderHistory() {
+  try {
+    const historyRef = ref(db, "reader_history");
+    const snapshot = await get(historyRef);
+    const data = snapshot.val() || {};
+
+    // Convert object to array
+    const historyArray = Object.entries(data).map(([key, value]) => ({
+      id: key,
+      ...value,
+    }));
+
+    // Sort by timestamp (newest first)
+    return historyArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  } catch (error) {
+    console.error("Error getting reader history:", error);
+    return [];
   }
 }
 
