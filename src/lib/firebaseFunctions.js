@@ -260,3 +260,38 @@ export async function resetAllJuzStatus() {
     return false;
   }
 }
+
+export const resetAllProgress = async () => {
+  try {
+    // Get current juz data to preserve assignments
+    const juzRef = ref(db, "juz_tracking");
+    const snapshot = await get(juzRef);
+    const currentData = snapshot.val() || {};
+
+    // Prepare updates object
+    const updates = {};
+
+    // For each juz, reset status but keep assignment
+    for (let i = 1; i <= 30; i++) {
+      const juzKey = i.toString();
+      const juzData = currentData[juzKey] || {};
+
+      updates[juzKey] = {
+        // Preserve the assignment if it exists
+        penugasan: juzData.penugasan || null,
+        // Reset the status to "Belum Dibaca"
+        status: "Belum Dibaca",
+        // Clear reading data
+        dibaca_oleh: null,
+        waktu_selesai: null,
+      };
+    }
+
+    // Update all juz at once
+    await set(ref(db, "juz_tracking"), updates);
+    return true;
+  } catch (error) {
+    console.error("Error resetting progress:", error);
+    return false;
+  }
+};

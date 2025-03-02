@@ -155,7 +155,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <Card className="mb-3 shadow-lg bg-white/70 backdrop-blur-sm">
+        {/* <Card className="mb-3 shadow-lg bg-white/70 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export default function Home() {
               <Progress value={progressPercentage} className="h-3" />
             </div>
           </CardHeader>
-        </Card>
+        </Card> */}
 
         <div className="mb-3 shadow-lg bg-white/70 backdrop-blur-sm rounded-lg overflow-hidden">
           <div className="flex items-center justify-between p-2 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
